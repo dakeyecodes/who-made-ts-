@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ambience test</title>
+<style>
+body{margin:0;padding:24px 16px 60px;background:#0d1117;color:#e6edf3;font:15px/1.6 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px}
+p.sub{color:#8b949e;margin:0 0 20px}
+.bar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:12px 14px;border:1px solid #30363d;border-radius:6px;background:#161b22;margin-bottom:20px;position:sticky;top:8px;z-index:2}
+.bar label{display:flex;gap:8px;align-items:center;font-size:13px;color:#8b949e}
+#now{font:13px ui-monospace,monospace;color:#3fb950}
+.track{border:1px solid #30363d;border-radius:6px;padding:14px 16px;margin:0 0 12px;background:#161b22}
+.track.on{border-color:#3fb950;box-shadow:0 0 0 1px #3fb95055}
+.track h2{font-size:16px;margin:0 0 2px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.track p{margin:4px 0 0;color:#8b949e;font-size:13px}
+button{font:600 13px system-ui,sans-serif;padding:7px 14px;border-radius:6px;border:1px solid #2ea043;background:#238636;color:#fff;cursor:pointer;white-space:nowrap}
+.track.on button{background:#21262d;border-color:#f85149;color:#f85149}
+#stop{background:#21262d;border-color:#30363d;color:#e6edf3}
+code{font-size:12px;color:#d2a8ff}
+</style>
+</head>
+<body>
+<main>
+<h1>Ambience test</h1>
+<p class="sub">Generated live in the browser with Web Audio: no audio files. Press play on any track. Starting another one crossfades into it. Every track evolves, so give each about 30 seconds. Levels are roughly matched so you’re comparing mood, not loudness.</p>
+<div class="bar"><button id="stop">■ Stop all</button><label>Volume <input id="vol" type="range" min="0" max="100" value="60"></label><span id="now">nothing playing</span></div>
+<div id="list"></div>
+</main>
+<script>
+/* ---------- shared engine ---------- */
+let ctx,master,verb,current=null;
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const volEl=document.getElementById('vol');
+const masterVol=()=>Math.pow(volEl.value/100,2)*.9;
+
+function init(){
+ if(ctx)return;
+ ctx=new (window.AudioContext||window.webkitAudioContext)();
+ const comp=ctx.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.attack.value=.05;comp.release.value=.4;
+ master=ctx.createGain();master.gain.value=masterVol();master.connect(comp);comp.connect(ctx.destination);
+ verb=ctx.createConvolver();verb.buffer=impulse(6,2.8);verb.connect(master);
+}
+volEl.oninput=()=>{if(master)master.gain.setTargetAtTime(masterVol(),ctx.currentTime,.1)};
+
+/* stereo reverb tail: decaying noise */
+function impulse(sec,decay){const n=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(2,n,ctx.sampleRate);
+ for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay)}return b}
+
+/* a looping noise buffer; brown=true gives soft rumble instead of hiss */
+function noiseBuf(sec,brown){const n=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);let last=0;
+ for(let i=0;i<n;i++){const w=Math.random()*2-1;if(brown){last=(last+.02*w)/1.02;d[i]=last*3.5}else d[i]=w}return b}
+
+/* every track gets a bus with a dry path and a reverb send, plus a scheduler and a list of things to stop */
+function makeTrack(wet,level=1){
+ const T={bus:ctx.createGain(),timers:[],nodes:[]};
+ const send=ctx.createGain();send.gain.value=wet;
+ T.bus.gain.value=0;T.bus.connect(master);T.bus.connect(send);send.connect(verb);
+ T.bus.gain.linearRampToValueAtTime(level,ctx.currentTime+3);
+ /* lookahead scheduler: fn(time) returns seconds until it should run again */
+ T.loop=(fn,first=.1)=>{let next=ctx.currentTime+first;const tick=()=>{while(next<ctx.currentTime+1.5)next+=fn(next)};tick();T.timers.push(setInterval(tick,250))};
+ T.keep=n=>{T.nodes.push(n);return n};
+ T.stop=()=>{T.timers.forEach(clearInterval);const t=ctx.currentTime;T.bus.gain.cancelScheduledValues(t);T.bus.gain.setValueAtTime(T.bus.gain.value,t);T.bus.gain.linearRampToValueAtTime(0,t+2.5);
+  setTimeout(()=>{T.nodes.forEach(n=>{try{n.stop()}catch(_){}});T.bus.disconnect()},3000)};
+ return T}
+
+/* ---------- instruments ---------- */
+/* soft pad: detuned saws through a lowpass, slow swell in and out */
+function pad(dest,freq,t,dur,vol=.05,cut=900,type='sawtooth'){
+ const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;f.Q.value=.4;
+ const a=Math.min(dur*.4,5);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+a);g.gain.setValueAtTime(vol,t+dur-a);g.gain.linearRampToValueAtTime(0,t+dur);
+ [-7,0,7].forEach(det=>{const o=ctx.createOscillator();o.type=type;o.frequency.value=freq;o.detune.value=det+rand(-2,2);o.connect(f);o.start(t);o.stop(t+dur+.1)});
+ f.connect(g);g.connect(dest)}
+
+/* felt-piano-ish note: a few sine partials with a soft attack and long decay */
+function keyNote(dest,freq,t,vol=.06,decay=4,pan=0){
+ const g=ctx.createGain(),p=ctx.createStereoPanner(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=2200;p.pan.value=pan;
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+decay);
+ [[1,1],[2,.35],[3,.12],[4.01,.05]].forEach(([m,a])=>{const o=ctx.createOscillator(),og=ctx.createGain();o.frequency.value=freq*m;og.gain.value=a;o.connect(og);og.connect(f);o.start(t);o.stop(t+decay+.1)});
+ f.connect(g);g.connect(p);p.connect(dest)}
+
+/* FM bell: metallic, distant */
+function bell(dest,freq,t,vol=.03,decay=6,pan=0){
+ const c=ctx.createOscillator(),m=ctx.createOscillator(),mg=ctx.createGain(),g=ctx.createGain(),p=ctx.createStereoPanner();p.pan.value=pan;
+ c.frequency.value=freq;m.frequency.value=freq*3.5;mg.gain.setValueAtTime(freq*2,t);mg.gain.exponentialRampToValueAtTime(freq*.05,t+decay*.6);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+decay);
+ m.connect(mg);mg.connect(c.frequency);c.connect(g);g.connect(p);p.connect(dest);c.start(t);m.start(t);c.stop(t+decay+.1);m.stop(t+decay+.1)}
+
+/* triangle pluck */
+function pluck(dest,freq,t,vol=.05,decay=1.4,pan=0){
+ const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter(),p=ctx.createStereoPanner();o.type='triangle';o.frequency.value=freq;p.pan.value=pan;
+ f.type='lowpass';f.frequency.setValueAtTime(3200,t);f.frequency.exponentialRampToValueAtTime(500,t+decay);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+decay);
+ o.connect(f);f.connect(g);g.connect(p);p.connect(dest);o.start(t);o.stop(t+decay+.1)}
+
+/* echo send for a track: feedback delay */
+function echo(T,time,fb,mix){const d=ctx.createDelay(2),f=ctx.createGain(),w=ctx.createGain(),lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;
+ d.delayTime.value=time;f.gain.value=fb;w.gain.value=mix;d.connect(lp);lp.connect(f);f.connect(d);lp.connect(w);w.connect(T.bus);return d}
+
+/* a slowly breathing lowpass between a source and the bus */
+function breathingFilter(T,lo,hi,rate){const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=(lo+hi)/2;f.Q.value=.6;
+ const l=T.keep(ctx.createOscillator()),lg=ctx.createGain();l.frequency.value=rate;lg.gain.value=(hi-lo)/2;l.connect(lg);lg.connect(f.frequency);l.start();f.connect(T.bus);return f}
+
+/* ---------- tracks ---------- */
+const TRACKS=[
+{name:'0 · Current hum (for comparison)',desc:'The site’s existing drone: four fixed notes through a lowpass, nothing changes.',wet:0,level:.35,
+ start(T){const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=700;f.connect(T.bus);
+  [110,164.8,220.5,277.2].forEach((fr,i)=>{const x=T.keep(ctx.createOscillator()),l=T.keep(ctx.createOscillator()),lg=ctx.createGain(),g=ctx.createGain();g.gain.value=.25;
+   x.type=i%2?'triangle':'sine';x.frequency.value=fr;l.frequency.value=.05+i*.03;lg.gain.value=fr*.004;l.connect(lg);lg.connect(x.frequency);x.connect(g);g.connect(f);x.start();l.start()})}},
+
+{name:'1 · Night shift',desc:'Slow pad chords in A minor (Am9, Fmaj7, Cmaj7, Em7), 12 s each, with a filter that breathes and the odd high note drifting through. Warm and unobtrusive.',wet:.55,level:1.3,
+ start(T){const out=breathingFilter(T,500,1500,.035);
+  const C=[['Am9',[45,57,60,64,67,71]],['Fmaj7',[41,53,57,60,64]],['Cmaj7',[48,55,59,64,67]],['Em7',[40,55,59,62,67]]];let i=0;
+  T.loop(t=>{const [name,notes]=C[i++%C.length];T.label=name;notes.forEach((m,k)=>pad(out,mtof(m),t,15,k?.022:.04,k?1100:400));
+   pad(out,mtof(notes[0]-12),t,15,.05,200,'sine');return 12});
+  T.loop(t=>{const [,notes]=C[(i+3)%C.length];keyNote(T.bus,mtof(pick(notes.slice(1))+12),t,.025,6,rand(-.6,.6));return rand(4,9)},3)}},
+
+{name:'2 · Evidence room',desc:'Sparse felt-piano notes in D dorian over a low drone that shifts every 16 s, plus faint tape hiss. Quiet, thoughtful, a little unresolved.',wet:.7,level:2.4,
+ start(T){const hiss=T.keep(ctx.createBufferSource()),hf=ctx.createBiquadFilter(),hg=ctx.createGain();hiss.buffer=noiseBuf(4,true);hiss.loop=true;hf.type='lowpass';hf.frequency.value=1200;hg.gain.value=.05;hiss.connect(hf);hf.connect(hg);hg.connect(T.bus);hiss.start();
+  const roots=[[38,45],[34,41],[36,43],[38,45]];let r=0;
+  T.loop(t=>{const [a,b]=roots[r++%roots.length];pad(T.bus,mtof(a),t,18,.045,260,'triangle');pad(T.bus,mtof(b),t,18,.025,400,'triangle');return 16});
+  const scale=[62,65,67,69,72,74,76,77,79,81];
+  T.loop(t=>{const n=pick(scale);keyNote(T.bus,mtof(n),t,rand(.035,.07),rand(3,6),rand(-.5,.5));if(Math.random()<.3)keyNote(T.bus,mtof(n-pick([3,5,7])),t+rand(.05,.25),.035,4,rand(-.5,.5));return rand(1.4,4.2)},1)}},
+
+{name:'3 · Rain on the terminal',desc:'Lo-fi: soft rain and vinyl crackle, Rhodes-style chords (Dm9, G13, Cmaj9, Am7) at 70 bpm, a muffled kick and brushed hats. Most “music” of the set.',wet:.35,level:4,
+ start(T){const rain=T.keep(ctx.createBufferSource()),hp=ctx.createBiquadFilter(),lp=ctx.createBiquadFilter(),rg=ctx.createGain();rain.buffer=noiseBuf(3);rain.loop=true;hp.type='highpass';hp.frequency.value=500;lp.type='lowpass';lp.frequency.value=2600;rg.gain.value=.035;
+  rain.connect(hp);hp.connect(lp);lp.connect(rg);rg.connect(T.bus);rain.start();
+  const beat=60/70,C=[['Dm9',[50,57,60,64,65]],['G13',[43,53,59,64,65]],['Cmaj9',[48,55,59,62,64]],['Am7',[45,55,60,64,67]]];let c=0,b=0;
+  const d=echo(T,beat*.75,.3,.25);
+  T.loop(t=>{const [name,notes]=C[c++%C.length];T.label=name;
+   notes.forEach((m,k)=>keyNote(T.bus,mtof(m),t+k*.025,k?.03:.05,beat*7,k%2?.25:-.25));
+   keyNote(d,mtof(pick(notes.slice(2))+12),t+beat*2.5,.025,2,.4);return beat*8});
+  T.loop(t=>{const s=b++%8;
+   if(s===0||s===5){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(42,t+.25);g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.35);o.connect(g);g.connect(T.bus);o.start(t);o.stop(t+.4)}
+   if(s%2===1){const n=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();n.buffer=noiseBuf(.1);f.type='bandpass';f.frequency.value=7000;f.Q.value=.8;g.gain.setValueAtTime(.025,t);g.gain.exponentialRampToValueAtTime(.001,t+.08);n.connect(f);f.connect(g);g.connect(T.bus);n.start(t)}
+   return beat});
+  T.loop(t=>{const n=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();n.buffer=noiseBuf(.02);f.type='highpass';f.frequency.value=2000;g.gain.value=rand(.01,.04);n.connect(f);f.connect(g);g.connect(T.bus);n.start(t);return rand(.05,.6)})}},
+
+{name:'4 · The lab',desc:'Darker, for the Frankenstein angle: a low cello-ish drone, a half-step tension that swells and resolves, distant metal bells and a slow heartbeat. Moodiest of the set.',wet:.6,level:2.4,
+ start(T){const out=breathingFilter(T,180,520,.02);
+  [55,55.4,82.4].forEach(fr=>{const o=T.keep(ctx.createOscillator()),g=ctx.createGain();o.type='sawtooth';o.frequency.value=fr;g.gain.value=.05;o.connect(g);g.connect(out);o.start()});
+  T.loop(t=>{pad(T.bus,mtof(58),t,10,.02,600);pad(T.bus,mtof(57),t+9,10,.025,600);return 24},6);
+  const bells=[57,60,64,65,69,72,76];
+  T.loop(t=>{bell(T.bus,mtof(pick(bells)+12),t,.02,rand(5,8),rand(-.8,.8));return rand(6,13)},2);
+  T.loop(t=>{[0,.28].forEach((o,k)=>{const x=ctx.createOscillator(),g=ctx.createGain();x.frequency.setValueAtTime(70,t+o);x.frequency.exponentialRampToValueAtTime(38,t+o+.18);g.gain.setValueAtTime(k?.07:.11,t+o);g.gain.exponentialRampToValueAtTime(.001,t+o+.25);x.connect(g);g.connect(T.bus);x.start(t+o);x.stop(t+o+.3)});return 1.5})}},
+
+{name:'5 · Glass arpeggio',desc:'A slow rolling arpeggio (Am add9, Fmaj7, Dm9, Esus4) with echoes bouncing left and right over a quiet pad. Feels like something being worked out.',wet:.45,level:5.5,
+ start(T){const d=echo(T,.56,.4,.35),step=60/80/2;
+  const C=[[57,64,71,72,76,71,64,60],[53,60,64,69,72,69,64,60],[50,57,60,64,65,64,60,57],[52,57,59,64,69,64,59,57]];let c=0,n=0;
+  T.loop(t=>{const k=Math.floor(n/16)%C.length,chord=C[k];if(n%16===0)[...new Set(chord)].slice(0,4).forEach(m=>pad(T.bus,mtof(m-12),t,step*17,.018,700));
+   const m=chord[n%8]+(n%16>=8?12:0);pluck(T.bus,mtof(m),t,.045,1.6,n%2?.45:-.45);pluck(d,mtof(m),t,.03,1.2,0);n++;return step})}},
+];
+
+/* ---------- UI ---------- */
+const list=document.getElementById('list'),now=document.getElementById('now');
+TRACKS.forEach((tr,i)=>{const el=document.createElement('div');el.className='track';el.innerHTML='<h2><span></span><button>▶ Play</button></h2><p></p>';
+ el.querySelector('span').textContent=tr.name;el.querySelector('p').textContent=tr.desc;
+ el.querySelector('button').onclick=()=>current&&current.i===i?stopAll():play(i);list.append(el);tr.el=el});
+function play(i){init();ctx.resume();stopAll(true);const tr=TRACKS[i],T=makeTrack(tr.wet,tr.level);T.i=i;tr.start(T);current=T;
+ tr.el.classList.add('on');tr.el.querySelector('button').textContent='■ Stop';now.textContent='▶ '+tr.name}
+function stopAll(quiet){if(current){current.stop();const tr=TRACKS[current.i];tr.el.classList.remove('on');tr.el.querySelector('button').textContent='▶ Play';current=null}if(!quiet)now.textContent='nothing playing'}
+document.getElementById('stop').onclick=()=>stopAll();
+/* show the chord name for tracks that report one */
+setInterval(()=>{if(current&&current.label)now.textContent='▶ '+TRACKS[current.i].name+' · '+current.label},500);
+</script>
+</body>
