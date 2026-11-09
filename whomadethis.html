@@ -220,6 +220,7 @@ pre{tab-size:4;line-height:1.8}pre mark .syn-keyword,pre mark .syn-function,pre 
 #game .boxb li{line-height:1.7;font-size:15px;color:#d0d7de}
 #game .boxb summary{font-size:15px;color:#fff}
 #game .next{box-shadow:0 0 16px rgba(46,160,67,.45)}
+#game .claude-glow{color:#d8b9ff;font-weight:700;text-shadow:0 0 6px rgba(188,140,255,.9),0 0 14px rgba(163,113,247,.75),0 0 26px rgba(163,113,247,.45)}
 </style>
 <style id="rework-styles">
 .cmb .lead{margin:.5em 0 0;font-size:15px;color:var(--tx)}
@@ -770,6 +771,15 @@ const R=[
 		return FabricLoader.getInstance().getConfigDir().resolve("skycraft.properties");
 	}`,file:'SkyCraft · DestructionToggle.java',ans:'ai',who:'chasmlol, SkyCraft 0.1.2. Tagged Claude, like every public commit in SkyCraft.'}
 ];
+/* Make the word "Claude" glow purple inside the game panel */
+(()=>{const root=document.getElementById('round'),head=document.getElementById('game');if(!root)return;
+ let busy=false;
+ function paint(){if(busy)return;busy=true;
+  const w=document.createTreeWalker(head,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('pre,script,style,.claude-glow')||!/Claude/.test(n.nodeValue)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const nodes=[];while(w.nextNode())nodes.push(w.currentNode);
+  nodes.forEach(n=>{const f=document.createDocumentFragment();n.nodeValue.split(/(Claude)/).forEach(t=>{if(t==='Claude'){const sp=document.createElement('span');sp.className='claude-glow';sp.textContent=t;f.append(sp);}else if(t)f.append(document.createTextNode(t));});n.replaceWith(f);});
+  busy=false;}
+ new MutationObserver(paint).observe(head,{childList:true,subtree:true,characterData:true});paint();})();
 let ri=0;const guesses=[];const rd=document.getElementById('round'),sE=document.getElementById('score');
 const guessNames={h:'Human-written',ai:'AI-assisted','?':"Can't tell"};
 function round(){
