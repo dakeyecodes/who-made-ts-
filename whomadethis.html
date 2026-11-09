@@ -1502,7 +1502,9 @@ const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const PENTA=[0,2,4,7,9,12,14,16,19,21,24];const hz=(base,st)=>base*Math.pow(2,st/12);
 function init(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.5;
  const d=ctx.createDelay();d.delayTime.value=.23;const fb=ctx.createGain();fb.gain.value=.25;const wet=ctx.createGain();wet.gain.value=.18;
- master.connect(ctx.destination);master.connect(d);d.connect(fb);fb.connect(d);d.connect(wet);wet.connect(ctx.destination)}
+ master.connect(ctx.destination);
+ /* one analyser hears everything (sound effects here, music from the score) so visuals can react to it */
+ const meter=ctx.createAnalyser();meter.fftSize=2048;meter.smoothingTimeConstant=.75;meter.minDecibels=-95;meter.maxDecibels=-30;master.connect(meter);const mute=ctx.createGain();mute.gain.value=0;meter.connect(mute);mute.connect(ctx.destination);window.__meter=meter;master.connect(d);d.connect(fb);fb.connect(d);d.connect(wet);wet.connect(ctx.destination)}
 function tone(f,dur,type,vol,delay,glide){if(!on||!ctx)return;const t=ctx.currentTime+(delay||0),o=ctx.createOscillator(),g=ctx.createGain();
  o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(glide)o.frequency.exponentialRampToValueAtTime(glide,t+dur);
  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.08,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
@@ -1563,7 +1565,7 @@ const Score=(()=>{
  const mtof=m=>440*Math.pow(2,(m-69)/12),rand=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
  const level=()=>.9*Math.pow(rng.value/100,.75);
  function setup(){if(bus)return;
-  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.attack.value=.05;comp.release.value=.4;comp.connect(ctx.destination);
+  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.attack.value=.05;comp.release.value=.4;comp.connect(ctx.destination);if(window.__meter)comp.connect(window.__meter);
   bus=ctx.createGain();bus.gain.value=level();duckG=ctx.createGain();duckG.connect(bus);bus.connect(comp);
   const n=Math.floor(ctx.sampleRate*6),b=ctx.createBuffer(2,n,ctx.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.8)}
   verb=ctx.createConvolver();verb.buffer=b;verb.connect(duckG)}
@@ -1997,9 +1999,16 @@ document.body.append(el);const $=id=>document.getElementById(id),play=$('sc-play
 /* keep the tutorial and title screen out of the tab order until the check is done */
 const hidden=[...document.body.children].filter(n=>n!==el&&n!==wrap&&n.tagName!=='SCRIPT'&&n.tagName!=='STYLE'&&!n.inert);hidden.forEach(n=>n.inert=true);
 setTimeout(()=>play.focus({preventScroll:true}),50);
-let raf;function dance(ms){if(RM)return;const bars=[...$('sc-bars').children],t0=performance.now();cancelAnimationFrame(raf);
- (function f(t){const p=(t-t0)/ms;bars.forEach((b,k)=>{const env=Math.max(0,1-p)*(.55+.45*Math.sin(t/90+k*.7)*Math.sin(t/230+k*.31));b.style.height=Math.max(4,env*100*(1-Math.abs(k-11.5)/16))+'%'});if(p<1)raf=requestAnimationFrame(f)})(t0)}
-play.onclick=()=>{try{window.sfx&&window.sfx.approve()}catch(_){}play.classList.add('on');play.textContent='♪';dance(1800);
+/* the bars follow the real audio output: music and every sound effect, low notes in the middle */
+let raf;function dance(){if(RM||raf)return;const bars=[...$('sc-bars').children],half=bars.length/2;let data=null;
+ (function f(){if(!el.isConnected){raf=null;return}const m=window.__meter;
+  if(m){if(!data)data=new Uint8Array(m.frequencyBinCount);m.getByteFrequencyData(data);
+   const hz=m.context.sampleRate/m.fftSize;
+   /* each bar covers a slice of 50 Hz – 4 kHz on a log scale, so low music and bright effects both show */
+   bars.forEach((b,k)=>{const d=Math.abs(k-(half-.5))-.5,lo=Math.floor(50*Math.pow(80,d/half)/hz),hi=Math.max(lo+1,Math.ceil(50*Math.pow(80,(d+1)/half)/hz));let v=0;for(let i=lo;i<hi;i++)v=Math.max(v,data[i]);b.style.height=Math.max(4,Math.pow(v/255,1.4)*100*(1-d/(half*2.4)))+'%'})}
+  raf=requestAnimationFrame(f)})()}
+dance();
+play.onclick=()=>{try{window.sfx&&window.sfx.approve()}catch(_){}play.classList.add('on');play.textContent='♪';dance();
  if(q.innerHTML)return;setTimeout(()=>{q.innerHTML='<p class="sc-q">Did you hear that?</p><div class="sc-row"><button type="button" class="sc-btn go" id="sc-yes">Yes, I hear it</button><button type="button" class="sc-btn" id="sc-no">No, nothing</button></div>';
   $('sc-yes').onclick=spotlight;$('sc-no').onclick=tips;$('sc-yes').focus()},RM?0:1300)};
 function tips(){if(el.querySelector('.sc-tips'))return;q.insertAdjacentHTML('beforeend','<div class="sc-tips"><b>No sound? Try this:</b><ul><li>Turn up your device volume.</li><li>Unmute this browser tab.</li><li>Check your headphones are connected.</li><li>Make sure ♪ in the bottom-left corner says “sound on”.</li></ul><div class="sc-row" style="justify-content:flex-start"><button type="button" class="sc-btn" id="sc-again">Try again</button><button type="button" class="sc-link" id="sc-skip">Continue without sound (not recommended)</button></div></div>');
