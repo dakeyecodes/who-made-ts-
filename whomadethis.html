@@ -1404,9 +1404,9 @@ tip.addEventListener('mouseenter',()=>clearTimeout(hideTimer));tip.addEventListe
 })();
 </script>
 <!-- ===== Generated sound (Web Audio, no files) ===== -->
-<style>#snd-wrap{position:fixed;left:20px;bottom:20px;z-index:80;display:flex;align-items:center;gap:10px}#snd-vol{width:0;opacity:0;pointer-events:none;transition:width .25s,opacity .25s;display:flex;align-items:center;gap:8px;background:#161b22;border:1px solid #48405e;border-radius:6px;padding:0;height:38px;overflow:hidden;font:12px ui-monospace,Menlo,monospace;color:#8b949e;box-shadow:0 4px 20px #0005}#snd-wrap:hover #snd-vol,#snd-wrap:focus-within #snd-vol{width:190px;opacity:1;pointer-events:auto;padding:0 12px}#snd-vol input{width:110px;accent-color:#3fb950;cursor:pointer}</style><div id="snd-wrap"><button type="button" id="snd-toggle" aria-pressed="true" title="Sound" style="padding:10px 16px;background:#161b22;color:#3fb950;border:1px solid #48405e;border-radius:6px;font:13px ui-monospace,Menlo,monospace;cursor:pointer;box-shadow:0 4px 20px #0005">♪ sound on</button><label id="snd-vol">hum<input type="range" id="snd-range" min="0" max="100" value="15" aria-label="Background hum volume"><span id="snd-pct">15%</span></label></div>
+<style>#snd-wrap{position:fixed;left:20px;bottom:20px;z-index:80;display:flex;align-items:center;gap:10px}#snd-vol{width:0;opacity:0;pointer-events:none;transition:width .25s,opacity .25s;display:flex;align-items:center;gap:8px;background:#161b22;border:1px solid #48405e;border-radius:6px;padding:0;height:38px;overflow:hidden;font:12px ui-monospace,Menlo,monospace;color:#8b949e;box-shadow:0 4px 20px #0005}#snd-wrap:hover #snd-vol,#snd-wrap:focus-within #snd-vol{width:190px;opacity:1;pointer-events:auto;padding:0 12px}#snd-vol input{width:110px;accent-color:#3fb950;cursor:pointer}</style><div id="snd-wrap"><button type="button" id="snd-toggle" aria-pressed="true" title="Sound" style="padding:10px 16px;background:#161b22;color:#3fb950;border:1px solid #48405e;border-radius:6px;font:13px ui-monospace,Menlo,monospace;cursor:pointer;box-shadow:0 4px 20px #0005">♪ sound on</button><label id="snd-vol">music<input type="range" id="snd-range" min="0" max="100" value="15" aria-label="Background music volume"><span id="snd-pct">15%</span></label></div>
 <script>
-(()=>{let ctx,master,on=true,amb=null,started=false;const btn=document.getElementById('snd-toggle');
+(()=>{let ctx,master,on=true,started=false;const btn=document.getElementById('snd-toggle');
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const PENTA=[0,2,4,7,9,12,14,16,19,21,24];const hz=(base,st)=>base*Math.pow(2,st/12);
 function init(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=.5;
@@ -1461,14 +1461,91 @@ const S={
  stamp:()=>{tone(220,.3,'sine',.12,0,70);setTimeout(()=>[0,4,7,12].forEach((st,i)=>tone(hz(523,st),.9,'triangle',.05,i*.06)),120)}};
 window.sfx=S;
 const rng=document.getElementById('snd-range'),pct=document.getElementById('snd-pct');
-function humVol(){return .14*Math.pow(rng.value/100,2)}
-rng.addEventListener('input',()=>{pct.textContent=rng.value+'%';if(amb&&ctx)amb.g.gain.setTargetAtTime(humVol(),ctx.currentTime,.08)});
+rng.addEventListener('input',()=>{pct.textContent=rng.value+'%';Score.vol()});
 rng.addEventListener('click',e=>e.stopPropagation());
-function ambient(start){if(!ctx)return;if(!start){if(amb){amb.g.gain.linearRampToValueAtTime(0,ctx.currentTime+1.2);const a=amb;setTimeout(()=>a.o.forEach(x=>x.stop()),1400);amb=null}return}
- const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=700;g.gain.value=0;g.gain.linearRampToValueAtTime(humVol(),ctx.currentTime+3);
- const o=[110,164.8,220.5,277.2].map((fr,i)=>{const x=ctx.createOscillator(),l=ctx.createOscillator(),lg=ctx.createGain();x.type=i%2?'triangle':'sine';x.frequency.value=fr;
-  l.frequency.value=.05+i*.03;lg.gain.value=fr*.004;l.connect(lg);lg.connect(x.frequency);x.connect(f);x.start();l.start();return x});
- f.connect(g);g.connect(ctx.destination);amb={g,o}}
+/* ---------- background score: four generated tracks, cued by what is on screen ----------
+   overview 1–3 → evidence · overview 4–7 → glass · overview 8–9, readme, history, components, viewer → evidence
+   predictions, blame → lab · catalogue → glass · credit review, sources → night */
+const Score=(()=>{
+ let bus=null,duckG=null,verb=null,cur=null,want=null,enabled=false,tm=null;
+ const FADE=5;
+ const mtof=m=>440*Math.pow(2,(m-69)/12),rand=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
+ const level=()=>.9*Math.pow(rng.value/100,.75);
+ function setup(){if(bus)return;
+  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.attack.value=.05;comp.release.value=.4;comp.connect(ctx.destination);
+  bus=ctx.createGain();bus.gain.value=level();duckG=ctx.createGain();duckG.connect(bus);bus.connect(comp);
+  const n=Math.floor(ctx.sampleRate*6),b=ctx.createBuffer(2,n,ctx.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.8)}
+  verb=ctx.createConvolver();verb.buffer=b;verb.connect(duckG)}
+ function noiseBuf(sec,brown){const n=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);let last=0;
+  for(let i=0;i<n;i++){const w=Math.random()*2-1;if(brown){last=(last+.02*w)/1.02;d[i]=last*3.5}else d[i]=w}return b}
+ function track(wet,lvl){const T={out:ctx.createGain(),timers:[],nodes:[]},send=ctx.createGain();send.gain.value=wet;
+  T.out.gain.value=0;T.out.connect(duckG);T.out.connect(send);send.connect(verb);T.out.gain.linearRampToValueAtTime(lvl,ctx.currentTime+FADE);
+  T.loop=(fn,first=.1)=>{let next=ctx.currentTime+first;const tick=()=>{while(next<ctx.currentTime+1.5)next+=fn(next)};tick();T.timers.push(setInterval(tick,250))};
+  T.keep=n=>{T.nodes.push(n);return n};
+  T.stop=()=>{T.timers.forEach(clearInterval);const t=ctx.currentTime,g=T.out.gain;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(0,t+FADE);
+   setTimeout(()=>{T.nodes.forEach(n=>{try{n.stop()}catch(_){}});T.out.disconnect()},FADE*1000+400)};
+  return T}
+ function pad(dest,freq,t,dur,vol=.05,cut=900,type='sawtooth'){const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;f.Q.value=.4;
+  const a=Math.min(dur*.4,5);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+a);g.gain.setValueAtTime(vol,t+dur-a);g.gain.linearRampToValueAtTime(0,t+dur);
+  [-7,0,7].forEach(det=>{const o=ctx.createOscillator();o.type=type;o.frequency.value=freq;o.detune.value=det+rand(-2,2);o.connect(f);o.start(t);o.stop(t+dur+.1)});f.connect(g);g.connect(dest)}
+ function keyNote(dest,freq,t,vol=.06,decay=4,pan=0){const g=ctx.createGain(),p=ctx.createStereoPanner(),f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=2200;p.pan.value=pan;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+decay);
+  [[1,1],[2,.35],[3,.12],[4.01,.05]].forEach(([m,a])=>{const o=ctx.createOscillator(),og=ctx.createGain();o.frequency.value=freq*m;og.gain.value=a;o.connect(og);og.connect(f);o.start(t);o.stop(t+decay+.1)});f.connect(g);g.connect(p);p.connect(dest)}
+ function fmBell(dest,freq,t,vol=.03,decay=6,pan=0){const c=ctx.createOscillator(),m=ctx.createOscillator(),mg=ctx.createGain(),g=ctx.createGain(),p=ctx.createStereoPanner();p.pan.value=pan;
+  c.frequency.value=freq;m.frequency.value=freq*3.5;mg.gain.setValueAtTime(freq*2,t);mg.gain.exponentialRampToValueAtTime(freq*.05,t+decay*.6);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+decay);
+  m.connect(mg);mg.connect(c.frequency);c.connect(g);g.connect(p);p.connect(dest);c.start(t);m.start(t);c.stop(t+decay+.1);m.stop(t+decay+.1)}
+ function triPluck(dest,freq,t,vol=.05,decay=1.4,pan=0){const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter(),p=ctx.createStereoPanner();o.type='triangle';o.frequency.value=freq;p.pan.value=pan;
+  f.type='lowpass';f.frequency.setValueAtTime(3200,t);f.frequency.exponentialRampToValueAtTime(500,t+decay);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+decay);
+  o.connect(f);f.connect(g);g.connect(p);p.connect(dest);o.start(t);o.stop(t+decay+.1)}
+ function echo(T,time,fb,mix){const d=ctx.createDelay(2),f=ctx.createGain(),w=ctx.createGain(),lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;
+  d.delayTime.value=time;f.gain.value=fb;w.gain.value=mix;d.connect(lp);lp.connect(f);f.connect(d);lp.connect(w);w.connect(T.out);return d}
+ function breathing(T,lo,hi,rate){const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=(lo+hi)/2;f.Q.value=.6;
+  const l=T.keep(ctx.createOscillator()),lg=ctx.createGain();l.frequency.value=rate;lg.gain.value=(hi-lo)/2;l.connect(lg);lg.connect(f.frequency);l.start();f.connect(T.out);return f}
+ const TRACKS={
+  /* Night shift: slow Am9 · Fmaj7 · Cmaj7 · Em7 pads, a breathing filter, the odd high note */
+  night:{wet:.55,lvl:1.3,start(T){const out=breathing(T,500,1500,.035);
+   const C=[[45,57,60,64,67,71],[41,53,57,60,64],[48,55,59,64,67],[40,55,59,62,67]];let i=0;
+   T.loop(t=>{const n=C[i++%C.length];n.forEach((m,k)=>pad(out,mtof(m),t,15,k?.022:.04,k?1100:400));pad(out,mtof(n[0]-12),t,15,.05,200,'sine');return 12});
+   T.loop(t=>{const n=C[(i+3)%C.length];keyNote(T.out,mtof(pick(n.slice(1))+12),t,.025,6,rand(-.6,.6));return rand(4,9)},3)}},
+  /* Evidence room: sparse felt-piano notes in D dorian over a shifting low drone and faint hiss */
+  evidence:{wet:.7,lvl:2.4,start(T){const h=T.keep(ctx.createBufferSource()),hf=ctx.createBiquadFilter(),hg=ctx.createGain();h.buffer=noiseBuf(4,true);h.loop=true;hf.type='lowpass';hf.frequency.value=1200;hg.gain.value=.05;h.connect(hf);hf.connect(hg);hg.connect(T.out);h.start();
+   const roots=[[38,45],[34,41],[36,43],[38,45]];let r=0;
+   T.loop(t=>{const [a,b]=roots[r++%roots.length];pad(T.out,mtof(a),t,18,.045,260,'triangle');pad(T.out,mtof(b),t,18,.025,400,'triangle');return 16});
+   const sc=[62,65,67,69,72,74,76,77,79,81];
+   T.loop(t=>{const n=pick(sc);keyNote(T.out,mtof(n),t,rand(.035,.07),rand(3,6),rand(-.5,.5));if(Math.random()<.3)keyNote(T.out,mtof(n-pick([3,5,7])),t+rand(.05,.25),.035,4,rand(-.5,.5));return rand(1.4,4.2)},1)}},
+  /* The lab: low drone, a half-step tension that swells and resolves, distant bells, a heartbeat that fades after ~40 s */
+  lab:{wet:.6,lvl:2.4,start(T){const out=breathing(T,180,520,.02);
+   [55,55.4,82.4].forEach(fr=>{const o=T.keep(ctx.createOscillator()),g=ctx.createGain();o.type='sawtooth';o.frequency.value=fr;g.gain.value=.05;o.connect(g);g.connect(out);o.start()});
+   T.loop(t=>{pad(T.out,mtof(58),t,10,.02,600);pad(T.out,mtof(57),t+9,10,.025,600);return 24},6);
+   const bells=[57,60,64,65,69,72,76];T.loop(t=>{fmBell(T.out,mtof(pick(bells)+12),t,.02,rand(5,8),rand(-.8,.8));return rand(6,13)},2);
+   const hb=ctx.createGain(),t0=ctx.currentTime;hb.connect(T.out);hb.gain.setValueAtTime(1,t0+35);hb.gain.linearRampToValueAtTime(0,t0+45);
+   T.loop(t=>{if(t>t0+46)return 30;[0,.28].forEach((o,k)=>{const x=ctx.createOscillator(),g=ctx.createGain();x.frequency.setValueAtTime(70,t+o);x.frequency.exponentialRampToValueAtTime(38,t+o+.18);g.gain.setValueAtTime(k?.07:.11,t+o);g.gain.exponentialRampToValueAtTime(.001,t+o+.25);x.connect(g);g.connect(hb);x.start(t+o);x.stop(t+o+.3)});return 1.5})}},
+  /* Glass arpeggio: a rolling arpeggio with echoes over a quiet pad, a touch slower than the test page */
+  glass:{wet:.45,lvl:5,start(T){const d=echo(T,.6,.4,.35),step=60/72/2;
+   const C=[[57,64,71,72,76,71,64,60],[53,60,64,69,72,69,64,60],[50,57,60,64,65,64,60,57],[52,57,59,64,69,64,59,57]];let n=0;
+   T.loop(t=>{const chord=C[Math.floor(n/16)%C.length];if(n%16===0)[...new Set(chord)].slice(0,4).forEach(m=>pad(T.out,mtof(m-12),t,step*17,.018,700));
+    const m=chord[n%8]+(n%16>=8?12:0);triPluck(T.out,mtof(m),t,.045,1.6,n%2?.45:-.45);triPluck(d,mtof(m),t,.03,1.2,0);n++;return step})}}};
+ /* which track belongs on screen right now */
+ function cue(){const s=document.querySelector('main>section.on,section.on');const id=s&&s.id;
+  if(id==='context'){const k=typeof contextStep==='number'?contextStep:0;return k>=3&&k<=6?'glass':'evidence'}
+  return {readme:'evidence',log:'evidence',work:'evidence',viewer:'evidence',game:'lab',blame:'lab',multiply:'glass',pr:'night',refs:'night'}[id]||'evidence'}
+ function apply(){if(!ctx||!enabled)return;setup();const next=cue();if(cur&&cur.name===next)return;
+  if(cur)cur.T.stop();const def=TRACKS[next],T=track(def.wet,def.lvl);def.start(T);cur={name:next,T}}
+ /* wait for the screen to settle so fast clicking does not thrash between tracks */
+ let pending=null;
+ function update(){if(!enabled)return;const n=cue();if(n===pending)return;pending=n;clearTimeout(tm);tm=setTimeout(apply,700)}
+ const mo=new MutationObserver(update);document.querySelectorAll('section,#context .context-step').forEach(el=>mo.observe(el,{attributes:true,attributeFilter:['class','hidden']}));
+ return{
+  enable(v){enabled=v;pending=null;if(!ctx)return;if(v){clearTimeout(tm);apply()}else if(cur){clearTimeout(tm);cur.T.stop();cur=null}},
+  vol(){if(bus)bus.gain.setTargetAtTime(level(),ctx.currentTime,.08)},
+  /* dip the music under busy sound effects (counters, commit replays, blame ticks) */
+  duck(){if(!duckG)return;const t=ctx.currentTime;duckG.gain.cancelScheduledValues(t);duckG.gain.setTargetAtTime(.55,t,.05);duckG.gain.setTargetAtTime(1,t+.35,.4)},
+  get now(){return cur&&cur.name}};
+})();
+window.__score=Score;
+['line','commit','shutter'].forEach(k=>{const f=S[k];S[k]=a=>{Score.duck();return f(a)}});
+function ambient(start){Score.enable(start)}
 function start(){if(started)return;started=true;init();ctx.resume&&ctx.resume();if(on)ambient(true)}
 ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target!==btn)start()},{capture:true,passive:true}));
 /* start the music the moment "Proceed" is pressed on the title screen */
