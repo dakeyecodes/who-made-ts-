@@ -573,8 +573,96 @@ const postH=()=&gt;{try{const f=frameElement;if(f)f.style.height=document.docume
 <section id="game">
 <div class="stage-path"><span>evidence / code excerpts</span><span>4 of 7</span></div>
 <h2>Who wrote this?</h2>
-<p>Can you recognise AI assistance by looking at code? Make a prediction for each excerpt, then <strong>open the commit details</strong>. <span class="round-count" id="score"></span></p>
-<div id="round"></div>
+<p><span class="wh-hd">Hold and drag</span> over the lines you think AI wrote. Then check the commit.</p>
+<style>
+#game .wh-hd{color:#f0e2ff;font-weight:700;padding:1px 8px;border-radius:6px;background:#bc8cff24;box-shadow:0 0 0 1px #bc8cff77,0 0 14px #bc8cff66;text-shadow:0 0 10px #bc8cffaa;animation:wh-pulse 1.8s infinite}
+#wh .box{margin:0;animation:wh-in .4s both}
+#wh .wh-code{padding:10px 0;background:#0a0d12;font:15px/1.9 var(--mono);color:#e6edf3}
+#wh .wh-ln{display:grid;grid-template-columns:3em minmax(0,1fr);cursor:crosshair;position:relative;user-select:none;background:linear-gradient(90deg,#bc8cff38,#bc8cff18) no-repeat 0 0/0% 100%;transition:background-size .35s cubic-bezier(.2,.8,.2,1),opacity .4s}
+#wh .wh-ln:hover{background-color:#ffffff08}
+#wh .wh-ln[aria-pressed=true]{background-size:100% 100%;box-shadow:inset 3px 0 0 var(--pu)}
+#wh .wh-ln .n{color:#6e7681;text-align:right;padding-right:14px}
+#wh .wh-ln code{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;tab-size:4;padding:0 12px 0 0;background:none;color:inherit}
+#wh .wh-ln.blank{pointer-events:none}#wh .locked .wh-ln{cursor:default}
+#wh .wh-ln.mine{background-size:0 100%;box-shadow:none;outline:1px dashed #bc8cff99;outline-offset:-2px}
+#wh .wh-ln.c-ai::before,#wh .wh-ln.c-no::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pu);box-shadow:0 0 12px var(--pu);animation:wh-grow .35s both;transform-origin:top}
+#wh .wh-ln.c-no::before{background:#6e7681;box-shadow:none}#wh .wh-ln.orig{opacity:.35}
+#wh .syn-keyword{color:#ff7b72;text-shadow:0 0 8px rgba(255,123,114,.6)}#wh .syn-function{color:#e8e8a8}#wh .syn-type{color:#5eead4;text-shadow:0 0 8px rgba(78,201,176,.5)}#wh .syn-string{color:#a5d6ff}#wh .syn-number{color:#cfe8b8}#wh .syn-comment{color:#a6b3c2}
+#wh .wh-tag{margin:0;padding:8px 14px;font:13px var(--mono);border-top:1px solid var(--bd);background:var(--bg2);animation:wh-in .4s both}
+#wh .wh-foot{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:14px}
+#wh .wh-hint{font:13px var(--mono);color:var(--mu)}
+#wh .wh-term{background:#010409;border:1px solid var(--pu);color:var(--pu);font:600 14px var(--mono);border-radius:6px;padding:10px 16px;cursor:pointer;box-shadow:0 0 18px #bc8cff55;animation:wh-pulse 1.8s infinite}
+#wh .wh-rec{margin-top:14px;font:14px/1.8 var(--mono);padding:12px 16px;background:#010409;border:1px solid var(--bd);border-radius:6px;color:#b1bac4;animation:wh-in .4s both}
+#wh .wh-rec b{color:var(--ye);font-weight:400}#wh .wh-rec .msg{color:var(--tx);padding-left:2ch}
+#wh .tr{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:4px;animation:wh-stamp .5s cubic-bezier(.2,.8,.2,1)}
+#wh .tr.yes{border:1px solid #bc8cff88;background:#bc8cff1a}#wh .tr.no{border:1px dashed #484f58;color:#6e7681}
+#wh .wh-note{margin:12px 0 0;font-size:16px;color:#e6edf3}
+#wh .wh-go{margin-top:14px;background:#238636;border:1px solid #2ea043;color:#fff;border-radius:6px;padding:9px 16px;font:600 14px var(--sans);cursor:pointer;box-shadow:0 0 16px #2ea04366}
+#wh .wh-dots{display:flex;gap:6px;justify-content:center;margin:16px 0}#wh .wh-dots i{width:8px;height:8px;border-radius:50%;background:var(--bd)}#wh .wh-dots i.on{background:var(--pu);box-shadow:0 0 8px var(--pu)}#wh .wh-dots i.cur{background:var(--tx)}
+#wh .wh-end{border:1px solid var(--bd);border-radius:8px;padding:26px 20px;text-align:center;background:radial-gradient(ellipse at top,#bc8cff1f,transparent 70%);animation:wh-in .5s both}
+#wh .wh-big{font:700 46px/1.1 var(--mono);color:var(--pu);text-shadow:0 0 22px #bc8cff66}#wh .wh-big small{font-size:.4em;color:var(--mu);font-weight:400}
+#wh .wh-end p{max-width:620px;margin:12px auto 0;font-size:16px;color:#d0d7de}#wh .wh-end b{color:#fff}
+@keyframes wh-pulse{50%{box-shadow:0 0 0 1px #bc8cffaa,0 0 24px #bc8cff99}}
+@keyframes wh-in{from{opacity:0;transform:translateY(8px)}}
+@keyframes wh-grow{from{transform:scaleY(0)}}
+@keyframes wh-stamp{0%{transform:scale(2.2);opacity:0}60%{transform:scale(.92);opacity:1}100%{transform:none}}
+@media(prefers-reduced-motion:reduce){#wh *,#wh *::before,#game .wh-hd{animation:none!important;transition:none!important}}
+</style>
+<div id="wh"><div id="wh-stage"></div><div id="wh-dots"></div></div>
+<div id="round" hidden></div><span id="score" hidden></span>
+<script>
+(()=>{
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches,$=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const fx=(n,a)=>{try{window.sfx&&window.sfx[n](a)}catch(_){}};
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),glow=s=>s.replace(/Claude/g,'<span class="claude-glow">Claude</span>');
+/* Same four excerpts and commit facts as the original version of this tab. */
+const E=[
+ {file:'mashup · crates/sim/src/combat.rs',tag:1,who:'chasmlol',sha:'68a3f74',msg:'Knifing a block in the Minecraft world damages it like a bullet does',note:'chasmlol’s commit 68a3f74, tagged Claude.',
+  code:'if matches!(segment.collider, None | Some(ColliderId::World { .. }))\n    && world.publishes_snapshot()\n    && crate::voxel::active()\n{\n    crate::voxel::push_shot(segment.end, segment.normal, amount as f32);\n}'},
+ {file:'mashup · controller input',tag:0,who:'awsms',sha:'b7661e1',msg:'Match IW4x controller turn acceleration',note:'No Claude tag. An absent tag does not establish human-only authorship.',
+  code:'if input.pad_acceleration && goal.abs() > rate.abs() {\n    // IW4x ramps speed magnitude, then applies the requested direction.\n    // Acceleration follows base sensitivity, independently of FOV and ADS.\n    let step = TURN_ACCEL * input.pad_sensitivity * dt;\n    *rate = (rate.abs() + step).min(goal.abs()) * goal.signum();'},
+ {file:'mashup · crates/weapon_iw4/src/melee.rs',tag:1,who:'Bulat Fatykh',sha:'77ed5a0',newLine:2,note:'Only is_finite() is new, tagged Claude. The hex masks around it come from the reverse-engineered original.',
+  code:'let can_start = (charge.pm_flags & pm_flags::MELEE_CHARGE) == 0\n    && cmd_melee_charge_dist != 0\n    && cmd_melee_charge_yaw.is_finite()\n    && charge.pm_type == 0\n    && (charge.e_flags & 0xc00) == 0'},
+ {file:'SkyCraft · DestructionToggle.java',tag:1,who:'chasmlol',ver:'SkyCraft 0.1.2',note:'Tagged Claude, like every public commit in SkyCraft.',
+  code:'public final class DestructionToggle {\n\tprivate static final String KEY = "destruction";\n\tprivate DestructionToggle() {\n\t}\n\tprivate static Path file() {\n\t\treturn FabricLoader.getInstance().getConfigDir().resolve("skycraft.properties");\n\t}'}];
+const KW=new Set('if else let const static return pub fn use mod crate self Self impl struct enum trait for in while loop match matches mut ref unsafe class public private protected final void new null true false import as'.split(' '));
+const TY=new Set('String Path FabricLoader ColliderId World DestructionToggle Some None'.split(' '));
+const TOK=/\/\/[^\n]*|"(?:\\.|[^"\\])*"|\b(?:0x[\da-fA-F]+|\d+(?:\.\d+)?(?:f32|f64)?)\b|\b[A-Za-z_]\w*\b/g;
+function hl(s){let o='',last=0;for(const m of s.matchAll(TOK)){const w=m[0],after=s.slice(m.index+w.length);let k=null;
+ if(w.startsWith('//'))k='comment';else if(w[0]==='"')k='string';else if(/^\d/.test(w))k='number';else if(KW.has(w))k='keyword';
+ else if(TY.has(w)||/^[A-Z][A-Za-z0-9_]+$/.test(w))k='type';else if(/^\s*!?\s*\(/.test(after))k='function';
+ if(!k)continue;o+=esc(s.slice(last,m.index))+'<span class="syn-'+k+'">'+esc(w)+'</span>';last=m.index+w.length}return o+esc(s.slice(last))}
+const rec=e=>'<div class="wh-rec">'+(e.sha?'<div><b>commit</b> '+e.sha+'</div>':'<div><b>release</b> '+e.ver+'</div>')+'<div>Author: '+e.who+'</div>'+(e.msg?'<div class="msg">“'+e.msg+'”</div>':'')+'<span class="tr '+(e.tag?'yes':'no')+'">'+(e.tag?glow('Co-authored-by: Claude'):'no AI co-author tag')+'</span></div>';
+const dots=(cur,done)=>'<div class="wh-dots" aria-hidden="true">'+E.map((_,i)=>'<i class="'+(i<done?'on':i===cur?'cur':'')+'"></i>').join('')+'</div>';
+const stage=$('#wh-stage');let i=0,marked=0,paint=null;
+addEventListener('pointerup',()=>paint=null);
+function render(){if(i>=E.length)return end();const e=E[i],L=e.code.split('\n');$('#wh-dots').innerHTML=dots(i,i);
+ stage.innerHTML='<div class="box"><div class="boxh"><span class="mono">'+e.file+'</span><span>'+(i+1)+' / 4</span></div><div class="wh-code" id="wh-code">'+
+ L.map((l,k)=>'<div class="wh-ln'+(l.trim()?'':' blank')+'" data-k="'+k+'"'+(l.trim()?' role="button" tabindex="0" aria-pressed="false" aria-label="Line '+(k+1)+'"':'')+'><span class="n">'+(k+1)+'</span><code>'+(hl(l)||' ')+'</code></div>').join('')+
+ '</div><div id="wh-tag"></div></div><div class="wh-foot" id="wh-foot"><button type="button" class="wh-term" id="wh-check">$ git show '+(e.sha||'0.1.2')+'</button><span class="wh-hint" id="wh-hint">hold the mouse down and drag across lines · 0 painted</span></div><div id="wh-rev"></div>';
+ const code=$('#wh-code');let n=0;
+ const set=(ln,v)=>{if(!ln||ln.classList.contains('blank')||code.classList.contains('locked')||(ln.getAttribute('aria-pressed')==='true')===v)return;ln.setAttribute('aria-pressed',v);fx(v?'grow':'soft',n++);
+  const c=$$('[aria-pressed=true]',code).length;$('#wh-hint').textContent=c+' line'+(c===1?'':'s')+' painted'};
+ code.addEventListener('pointerdown',ev=>{const ln=ev.target.closest('.wh-ln');if(!ln||ln.classList.contains('blank'))return;paint=ln.getAttribute('aria-pressed')!=='true';set(ln,paint);ev.preventDefault()});
+ code.addEventListener('pointerover',ev=>{if(paint!==null)set(ev.target.closest('.wh-ln'),paint)});
+ code.addEventListener('keydown',ev=>{const ln=ev.target.closest('.wh-ln');if(ln&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();set(ln,ln.getAttribute('aria-pressed')!=='true')}});
+ $('#wh-check').onclick=check}
+function check(){const e=E[i],code=$('#wh-code'),mine=$$('[aria-pressed=true]',code).length;marked+=mine;
+ try{guesses[i]=mine?'ai':'h'}catch(_){}
+ code.classList.add('locked');$('#wh-foot').hidden=true;
+ $$('.wh-ln',code).forEach((ln,k)=>{ln.removeAttribute('tabindex');if(ln.getAttribute('aria-pressed')==='true')ln.classList.add('mine');
+  setTimeout(()=>{if(ln.classList.contains('blank'))return;const inC=e.newLine==null||k===e.newLine;ln.classList.add(inC?(e.tag?'c-ai':'c-no'):'orig');if(inC&&e.tag)fx('grow',k+3)},RM?0:k*90)});
+ setTimeout(()=>{$('#wh-tag').innerHTML='<p class="wh-tag">'+(e.newLine!=null?'only line '+(e.newLine+1)+' is from '+e.sha+' · '+glow('Co-authored-by: Claude'):e.tag?glow('Co-authored-by: Claude')+' → the whole commit, not single lines':e.sha+' → no AI co-author tag')+'</p>';
+  fx(e.tag?'stamp':'close');
+  $('#wh-rev').innerHTML=rec(e)+'<p class="wh-note">'+glow(e.note)+'</p><button type="button" class="wh-go" id="wh-next">'+(i<3?'Next excerpt':'Add it up')+'</button>';
+  $('#wh-next').focus({preventScroll:true});$('#wh-next').onclick=()=>{i++;render()}},RM?0:e.code.split('\n').length*90+250)}
+function end(){$('#wh-dots').innerHTML=dots(-1,4);
+ stage.innerHTML='<div class="wh-end"><div class="wh-big">0 <small>of your '+marked+' painted line'+(marked===1?'':'s')+' confirmed</small></div><p>'+
+ (marked?'The record never pins a single line on Claude. ':'You painted nothing, and the record couldn’t confirm that either. ')+'Three commits carry a Claude tag; one doesn’t. <b>A co-author tag covers a whole commit.</b> It doesn’t say which line came from whom.</p><p>The next view shows how GitHub attaches names to those changes.</p><button type="button" class="next" id="wh-blame">Look at the attribution →</button></div>';
+ $('#wh-blame').onclick=()=>go('blame');fx('glow')}
+render();
+})();
+</script>
 </section>
 
 <!-- ============ BLAME ============ -->
