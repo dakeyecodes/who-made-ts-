@@ -1299,7 +1299,7 @@ document.querySelectorAll('input[name^="credit-"]').forEach(input=>input.addEven
 .context-step h1{text-wrap:balance}
 .nine-term{border:1px solid var(--bd);border-radius:6px;background:#010409;margin:26px 0 18px;overflow:hidden}
 .nine-bar{display:flex;justify-content:space-between;gap:12px;padding:9px 14px;border-bottom:1px solid var(--bd);font:12px var(--mono);color:var(--mu)}
-.nine-clock{font:600 13px var(--mono);color:var(--ye)}
+.nine-clock{font:600 13px var(--mono);color:var(--ye)}.nine-clock.ff{color:var(--bl)}
 .nine-log{list-style:none;margin:0;padding:10px 14px 12px;min-height:310px;font:12.5px/1.5 var(--mono)}
 .nine-log li{display:grid;grid-template-columns:62px 52px 1fr auto;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px dashed #21262d;animation:nine-in .35s both}
 .nine-log li:last-child{border-bottom:0}
@@ -1789,7 +1789,7 @@ const catalogue=JSON.parse(document.getElementById('tree-project-data').textCont
  const log=step.querySelector('.nine-log'),clock=step.querySelector('.nine-clock'),st=k=>step.querySelector('[data-nine='+k+']');
  const hm=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
  let raf,stop=[];
- function row(c,i){if(i===5){const g=document.createElement('li');g.className='gap';g.textContent='… six hours pass …';log.append(g)}const li=document.createElement('li');[['h',c[0]],['t',hm(c[1])],['m',c[2]],['n','+'+fmt(c[4])]].forEach(([k,v])=>{const s=document.createElement('span');s.className=k;s.textContent=v;li.append(s)});const co=document.createElement('span');co.className='co';co.textContent='Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>';li.append(co);log.append(li)}
+ function row(c,i,showGap){if(showGap&&i===5){const g=document.createElement('li');g.className='gap';g.textContent='… six hours pass …';log.append(g)}const li=document.createElement('li');[['h',c[0]],['t',hm(c[1])],['m',c[2]],['n','+'+fmt(c[4])]].forEach(([k,v])=>{const s=document.createElement('span');s.className=k;s.textContent=v;li.append(s)});const co=document.createElement('span');co.className='co';co.textContent='Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>';li.append(co);log.append(li)}
  const nx=document.getElementById('nine-next');
  function lock(){nx.classList.add('locked');nx.classList.remove('nine-ready');nx.setAttribute('aria-disabled','true');nx.textContent='🔒 Wait for the log to finish'}
  function unlock(){nx.classList.remove('locked');nx.removeAttribute('aria-disabled');nx.textContent='Is that unusual? →';nx.classList.add('nine-ready')}
@@ -1799,11 +1799,14 @@ const catalogue=JSON.parse(document.getElementById('tree-project-data').textCont
  function bump(c){tot.commits++;tot.files+=c[3];const from=tot.lines;tot.lines+=c[4];st('commits').textContent=tot.commits;st('files').textContent=fmt(tot.files);const el=st('lines'),to=tot.lines,t0=performance.now();(function f(now){const p=Math.min(1,(now-t0)/700);el.textContent=fmt(from+(to-from)*(1-Math.pow(1-p,3)));if(p<1)stop.push(requestAnimationFrame(f))})(t0)}
  function hours(m){const d=m-1060;st('hours').textContent=Math.floor(d/60)+'h'+(d%60?' '+String(d%60).padStart(2,'0')+'m':'')}
  function reset(){cancelAnimationFrame(raf);stop.forEach(cancelAnimationFrame);stop=[];log.replaceChildren();tot={commits:0,files:0,lines:0};['commits','files','lines'].forEach(k=>st(k).textContent='0');st('hours').textContent='0h';clock.textContent='17:40';lock()}
- function run(){if(reduce){C.forEach((c,i)=>{row(c,i);tot.commits++;tot.files+=c[3];tot.lines+=c[4]});st('commits').textContent=tot.commits;st('files').textContent=fmt(tot.files);st('lines').textContent=fmt(tot.lines);hours(1596);clock.textContent='02:36';unlock();return}
-  const D=7000,t0=performance.now();let next=0;
-  (function f(now){const p=Math.min(1,(now-t0)/D),m=Math.round(1060+(1596-1060)*p);clock.textContent=hm(m);hours(m);
+ function run(){if(reduce){C.forEach((c,i)=>{row(c,i,true);tot.commits++;tot.files+=c[3];tot.lines+=c[4]});st('commits').textContent=tot.commits;st('files').textContent=fmt(tot.files);st('lines').textContent=fmt(tot.lines);hours(1596);clock.textContent='02:36';unlock();return}
+  /* the evening plays in real time; the six quiet hours (19:09 → 01:21) fast-forward in about a second */
+  const K=[[0,1060],[2800,1149],[3900,1521],[5800,1596]],D=K[K.length-1][0],t0=performance.now();let next=0,gap=false;
+  const at=e=>{for(let j=1;j<K.length;j++)if(e<=K[j][0]){const [a,ma]=K[j-1],[b,mb]=K[j];return Math.round(ma+(mb-ma)*(e-a)/(b-a))}return 1596};
+  (function f(now){const e=Math.min(D,now-t0),m=at(e),ff=m>1149&&m<1521;clock.textContent=(ff?'⏩ ':'')+hm(m);clock.classList.toggle('ff',ff);hours(m);
+   if(m>1149&&!gap){gap=true;const g=document.createElement('li');g.className='gap';g.textContent='… six hours pass …';log.append(g)}
    while(next<C.length&&C[next][1]<=m){row(C[next],next);bump(C[next]);sfx('commit');next++}
-   if(p<1)raf=requestAnimationFrame(f);else{sfx('stamp');unlock()}})(t0)}
+   if(e<D)raf=requestAnimationFrame(f);else{sfx('stamp');unlock()}})(t0)}
  onShow(step,run,reset)})();
 
 /* 144 of 226: one square per project */
