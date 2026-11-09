@@ -1616,5 +1616,73 @@ function check(){if(q.dataset.typed||!seen||!ready())return;io.disconnect();q.st
 new MutationObserver(check).observe(sec,{attributes:true,attributeFilter:['class']});new MutationObserver(check).observe(document.body,{attributes:true,attributeFilter:['class'],childList:true});
 addEventListener('scroll',check,{passive:true})})();
 </script>
+<!-- ===== Sound check: full-screen page shown before the repository tutorial ===== -->
+<style>
+#sound-check{position:fixed;inset:0;z-index:2500;background:#0d1117;display:grid;place-items:center;padding:24px;text-align:center;transition:opacity .6s,filter .6s}
+#sound-check.leaving{opacity:0;filter:blur(8px);pointer-events:none}
+#sound-check .sc-eye{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase;color:#bc8cff;display:inline-flex;gap:8px;align-items:center}
+#sound-check .sc-eye::before{content:'';width:7px;height:7px;border-radius:50%;background:#bc8cff;box-shadow:0 0 14px #bc8cff}
+#sound-check h1{font:650 40px/1.12 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;letter-spacing:-1px;margin:14px 0 10px;color:#e6edf3}
+#sound-check h1 em{font-style:normal;color:#e4caff;text-shadow:0 0 18px #bc8cff99}
+#sound-check .sc-lead{color:#b1bac4;font-size:17px;margin:0 auto 26px}
+#sound-check .sc-play{position:relative;width:132px;height:132px;border-radius:50%;border:1px solid #bc8cff;background:radial-gradient(circle at 50% 40%,#2a1d40,#0d1117 70%);box-shadow:0 0 30px #bc8cff66;font-size:44px;color:#e4caff;display:grid;place-items:center;margin:0 auto;cursor:pointer;transition:transform .2s}
+#sound-check .sc-play::before,#sound-check .sc-play::after{content:'';position:absolute;inset:-1px;border-radius:50%;border:1px solid #bc8cff;animation:sc-ring 2.2s ease-out infinite}
+#sound-check .sc-play::after{animation-delay:1.1s}#sound-check .sc-play:hover{transform:scale(1.04)}
+#sound-check .sc-play.on::before,#sound-check .sc-play.on::after{display:none}
+#sound-check .sc-bars{display:flex;gap:4px;justify-content:center;align-items:flex-end;height:70px;margin:20px auto 0;max-width:340px}
+#sound-check .sc-bars i{flex:1;background:linear-gradient(to top,#8957e5,#bc8cff);border-radius:3px 3px 0 0;height:4%;box-shadow:0 0 8px #bc8cff66}
+#sound-check .sc-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+#sound-check .sc-btn{background:#21262d;border:1px solid #30363d;border-radius:8px;padding:11px 18px;font:600 15px -apple-system,"Segoe UI",sans-serif;color:#e6edf3;min-height:46px;cursor:pointer}
+#sound-check .sc-btn:hover{border-color:#bc8cff}
+#sound-check .sc-btn.go{background:#238636;border-color:#2ea043;color:#fff;box-shadow:0 0 0 2px #2ea04355,0 0 22px #2ea04388}
+#sound-check .sc-q{margin:22px auto 0;color:#b1bac4;font-size:17px;animation:sc-in .4s both}
+#sound-check .sc-step{font:12px ui-monospace,Menlo,monospace;color:#8b949e;margin-top:22px}#sound-check .sc-step b{color:#e6edf3}
+#sound-check .sc-ok{color:#3fb950;font:600 15px ui-monospace,Menlo,monospace;margin-top:14px;animation:sc-in .4s both}
+#sound-check .sc-tips{text-align:left;max-width:440px;margin:18px auto 0;padding:14px 18px;border:1px solid #d2992266;border-left:3px solid #d29922;border-radius:0 8px 8px 0;background:#d299220d;animation:sc-in .4s both;color:#d0d7de;font-size:14px}
+#sound-check .sc-tips b{color:#d29922}#sound-check .sc-tips ul{margin:6px 0 0;padding-left:18px}
+#sound-check .sc-link{background:none;border:0;color:#8b949e;font-size:13px;text-decoration:underline;text-underline-offset:3px;padding:8px;cursor:pointer}
+#sound-check button:focus-visible{outline:2px solid #58a6ff;outline-offset:3px}
+#sc-spot{position:fixed;z-index:2550;border-radius:14px;pointer-events:none;box-shadow:0 0 0 200vmax rgba(1,4,9,.82);transition:box-shadow .5s}
+#sc-spot::after{content:'';position:absolute;inset:-8px;border:2px solid #bc8cff;border-radius:18px;animation:sc-ring 1.6s ease-out infinite}
+#sc-spot.done{box-shadow:0 0 0 200vmax rgba(1,4,9,0)}#sc-spot.done::after{border-color:#3fb950}
+#sc-call{position:fixed;z-index:2700;max-width:300px;background:#161b22;border:1px solid #bc8cff;border-radius:10px;padding:14px 16px;text-align:left;color:#e6edf3;font:14px/1.6 -apple-system,"Segoe UI",sans-serif;box-shadow:0 10px 40px #000c,0 0 24px #bc8cff44;animation:sc-in .4s both}
+#sc-call b{color:#e4caff}#sc-call span{font:12px ui-monospace,Menlo,monospace;color:#8b949e;display:block;margin-top:8px}
+#sc-call::after{content:'';position:absolute;left:34px;bottom:-8px;width:14px;height:14px;background:#161b22;border-right:1px solid #bc8cff;border-bottom:1px solid #bc8cff;transform:rotate(45deg)}
+#snd-wrap.sc-front{z-index:2600}
+#snd-wrap.sc-front #snd-vol{width:190px;opacity:1;pointer-events:auto;padding:0 12px}
+#snd-wrap.sc-hot #snd-toggle,#snd-wrap.sc-hot #snd-vol{border-color:#bc8cff!important;animation:sc-pulse 1.6s infinite}
+#snd-wrap.sc-found #snd-toggle,#snd-wrap.sc-found #snd-vol{border-color:#3fb950!important;box-shadow:0 0 0 2px #3fb95055,0 0 22px #3fb95088}
+@keyframes sc-ring{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+@keyframes sc-pulse{50%{box-shadow:0 0 0 2px #bc8cffaa,0 0 28px #bc8cffaa}}
+@keyframes sc-in{from{opacity:0;transform:translateY(8px)}}
+@media(prefers-reduced-motion:reduce){#sound-check *,#sound-check,#sc-spot,#sc-spot::after,#sc-call,#snd-wrap.sc-hot *{animation:none!important;transition:none!important}}
+</style>
+<script>
+(()=>{
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches,wrap=document.getElementById('snd-wrap'),rng=document.getElementById('snd-range'),tog=document.getElementById('snd-toggle');
+const el=document.createElement('div');el.id='sound-check';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','sc-title');
+el.innerHTML='<div><div class="sc-eye">Before you begin</div><h1 id="sc-title">This experience <em>needs sound.</em></h1><p class="sc-lead">Turn your volume up, then press play.</p><button type="button" class="sc-play" id="sc-play" aria-label="Play a test sound">▶</button><div class="sc-bars" id="sc-bars" aria-hidden="true">'+'<i></i>'.repeat(24)+'</div><div id="sc-q" aria-live="polite"></div></div>';
+document.body.append(el);const $=id=>document.getElementById(id),play=$('sc-play'),q=$('sc-q');
+/* keep the tutorial and title screen out of the tab order until the check is done */
+const hidden=[...document.body.children].filter(n=>n!==el&&n!==wrap&&n.tagName!=='SCRIPT'&&n.tagName!=='STYLE'&&!n.inert);hidden.forEach(n=>n.inert=true);
+setTimeout(()=>play.focus({preventScroll:true}),50);
+let raf;function dance(ms){if(RM)return;const bars=[...$('sc-bars').children],t0=performance.now();cancelAnimationFrame(raf);
+ (function f(t){const p=(t-t0)/ms;bars.forEach((b,k)=>{const env=Math.max(0,1-p)*(.55+.45*Math.sin(t/90+k*.7)*Math.sin(t/230+k*.31));b.style.height=Math.max(4,env*100*(1-Math.abs(k-11.5)/16))+'%'});if(p<1)raf=requestAnimationFrame(f)})(t0)}
+play.onclick=()=>{try{window.sfx&&window.sfx.approve()}catch(_){}play.classList.add('on');play.textContent='♪';dance(1800);
+ if(q.innerHTML)return;setTimeout(()=>{q.innerHTML='<p class="sc-q">Did you hear that?</p><div class="sc-row"><button type="button" class="sc-btn go" id="sc-yes">Yes, I hear it</button><button type="button" class="sc-btn" id="sc-no">No, nothing</button></div>';
+  $('sc-yes').onclick=spotlight;$('sc-no').onclick=tips;$('sc-yes').focus()},RM?0:1300)};
+function tips(){if(el.querySelector('.sc-tips'))return;q.insertAdjacentHTML('beforeend','<div class="sc-tips"><b>No sound? Try this:</b><ul><li>Turn up your device volume.</li><li>Unmute this browser tab.</li><li>Check your headphones are connected.</li><li>Make sure ♪ in the bottom-left corner says “sound on”.</li></ul><div class="sc-row" style="justify-content:flex-start"><button type="button" class="sc-btn" id="sc-again">Try again</button><button type="button" class="sc-link" id="sc-skip">Continue without sound (not recommended)</button></div></div>');
+ $('sc-again').onclick=()=>play.click();$('sc-skip').onclick=finish}
+function spotlight(){el.querySelector('.sc-tips')?.remove();q.innerHTML='<p class="sc-step">Step 2 of 2 · <b>find your sound control</b></p>';
+ wrap.classList.add('sc-front','sc-hot');document.body.insertAdjacentHTML('beforeend','<div id="sc-spot"></div><div id="sc-call"><b>Your sound lives here.</b> Mute with ♪, and slide to set the background hum.<span>Move the slider to continue.</span></div>');
+ const sp=$('sc-spot'),c=$('sc-call'),place=()=>{const r=wrap.getBoundingClientRect();Object.assign(sp.style,{left:r.left-8+'px',top:r.top-8+'px',width:r.width+16+'px',height:r.height+16+'px'});c.style.left=Math.max(16,r.left)+'px';c.style.bottom=innerHeight-r.top+22+'px'};
+ place();setTimeout(place,300);addEventListener('resize',place);rng.focus({preventScroll:true});
+ const found=()=>{rng.removeEventListener('input',found);tog.removeEventListener('click',found);removeEventListener('resize',place);
+  wrap.classList.remove('sc-hot');wrap.classList.add('sc-found');sp.classList.add('done');c.innerHTML='<b style="color:#3fb950">✓ Found it.</b> You can change this any time.';try{window.sfx&&window.sfx.glow()}catch(_){}
+  setTimeout(()=>{sp.remove();c.remove();wrap.classList.remove('sc-front','sc-found');q.innerHTML='<div class="sc-ok">✓ Sound works, and you know where the knob is.</div><div class="sc-row"><button type="button" class="sc-btn go" id="sc-go">Begin →</button></div>';$('sc-go').onclick=finish;$('sc-go').focus()},RM?0:1600)};
+ rng.addEventListener('input',found);tog.addEventListener('click',found)}
+function finish(){hidden.forEach(n=>n.inert=false);el.classList.add('leaving');setTimeout(()=>el.remove(),RM?0:600)}
+})();
+</script>
 </body>
 </html>
