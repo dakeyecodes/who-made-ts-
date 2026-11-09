@@ -946,6 +946,16 @@ function hookTitle(){try{const d=tf&&tf.contentDocument;if(!d||d.__sndHooked)ret
  d.addEventListener('pointerdown',()=>start(),true);d.addEventListener('keydown',()=>start(),true);
  d.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-proceed]')){start();S.next()}},true)}catch(_){}}
 if(tf){hookTitle();tf.addEventListener('load',hookTitle)}
+/* tutorial sound effects (no hum until the title screen) */
+function fx(name,arg){init();ctx.resume&&ctx.resume();S[name](arg)}
+function hookIntro(f){try{const d=f.contentDocument;if(!d||d.__sfxHooked||!d.getElementById('enter'))return;d.__sfxHooked=1;
+ d.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-part],#enter');if(!t)return;
+  if(t.id==='enter'){if(!t.disabled)fx('next')}else fx('file')},true);
+ d.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('#enter');if(t&&t.disabled)fx('locked')},true);
+ let last=null;d.addEventListener('mouseover',e=>{const t=e.target.closest&&e.target.closest('[data-term]');if(t&&t!==last){last=t;fx('guess')}if(!t)last=null},true);
+ d.addEventListener('focusin',e=>{if(e.target.matches&&e.target.matches('[data-term]'))fx('guess')},true)}catch(_){}}
+function findIntro(){document.querySelectorAll('iframe').forEach(f=>{if(f===tf||f.id==='integrated-viewer')return;hookIntro(f);if(!f.__sfxL){f.__sfxL=1;f.addEventListener('load',()=>hookIntro(f))}})}
+findIntro();new MutationObserver(findIntro).observe(document.body,{childList:true});setTimeout(findIntro,300);
 window.addEventListener('message',e=>{if(e.data&&e.data.type==='proceed-from-title'){if(!started)start()}});
 btn.addEventListener('click',e=>{e.stopPropagation();init();ctx.resume&&ctx.resume();started=true;on=!on;btn.textContent=on?'♪ sound on':'♪ sound off';
  btn.setAttribute('aria-pressed',on);btn.style.color=on?'#3fb950':'#8b949e';ambient(on);if(on)S.next()});
