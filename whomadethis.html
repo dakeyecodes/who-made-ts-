@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Modern Frankensteins Have No Victors</title>
+<style id="boot-cover">html{background:#0d1117}body{visibility:hidden}#sound-check,#snd-wrap,#sc-spot,#sc-call{visibility:visible}</style>
 <style>
 :root{--bg:#0d1117;--bg2:#161b22;--bd:#30363d;--tx:#e6edf3;--mu:#8b949e;--bl:#2f81f7;--gr:#3fb950;--rd:#f85149;--pu:#a371f7;--ye:#d29922;
 --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
@@ -1681,7 +1682,7 @@ function spotlight(){el.querySelector('.sc-tips')?.remove();q.innerHTML='<p clas
   wrap.classList.remove('sc-hot');wrap.classList.add('sc-found');sp.classList.add('done');c.innerHTML='<b style="color:#3fb950">✓ Found it.</b> You can change this any time.';try{window.sfx&&window.sfx.glow()}catch(_){}
   setTimeout(()=>{sp.remove();c.remove();wrap.classList.remove('sc-front','sc-found');q.innerHTML='<div class="sc-ok">✓ Sound works, and you know where the knob is.</div><div class="sc-row"><button type="button" class="sc-btn go" id="sc-go">Begin →</button></div>';$('sc-go').onclick=finish;$('sc-go').focus()},RM?0:1600)};
  rng.addEventListener('input',found);tog.addEventListener('click',found)}
-function finish(){hidden.forEach(n=>n.inert=false);el.classList.add('leaving');setTimeout(()=>el.remove(),RM?0:600)}
+function finish(){document.getElementById('boot-cover')?.remove();hidden.forEach(n=>n.inert=false);el.classList.add('leaving');setTimeout(()=>el.remove(),RM?0:600)}
 })();
 </script>
 </body>
