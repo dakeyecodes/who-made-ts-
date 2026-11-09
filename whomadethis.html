@@ -197,6 +197,29 @@ pre{tab-size:4;line-height:1.8}pre mark .syn-keyword,pre mark .syn-function,pre 
 #pr{max-width:1000px;margin:0 auto}.pr-proposal,.pr-credit-output{border:1px solid var(--bd);border-radius:6px;overflow:hidden;margin:22px 0}.proposal-line{font-size:20px;font-weight:600;margin:0 0 10px}.pr-proposal .boxb>p:last-child{font-size:14px;color:#b1bac4;margin-bottom:0;max-width:830px}.review-perspectives{margin:28px 0}.review-perspectives h3{font-size:16px;margin:0 0 12px}.perspective-row{display:grid;grid-template-columns:115px 1fr;gap:16px;border-top:1px solid var(--bd);padding:12px 0;font-size:13px}.perspective-row strong{font-weight:600}.perspective-row p{margin:0;color:#b1bac4;line-height:1.7}.perspective-row a{font-size:12px;white-space:nowrap}.pr-decisions{margin:30px 0}.pr-decisions h2{font-size:22px;border:0;margin-bottom:5px}.pr-decisions>p{font-size:13px;color:var(--mu);margin-top:0}#pr .credit-question{padding-top:18px;margin-top:20px}#pr .credit-question legend{font-size:15px}#pr .credit-question>p{font-size:12px}#pr .credit-option{padding:12px;gap:8px}#pr .credit-option strong{font-size:13px}#pr .credit-option small{font-size:12px}#pr .choice-note{display:none!important}.pr-credit-output .boxh{align-items:center}#credit-choice-progress{font:12px var(--mono);color:var(--mu)}.pr-credit-output .listing-preview{margin:0;border:0;padding:0}.pr-credit-output .listing-preview h4{font-size:14px}.pr-credit-output .credit-preview{border:0;border-top:1px solid var(--bd);border-radius:0;margin-top:16px;padding:16px 0 0;font-size:13px;background:none}.pr-credit-output .credit-preview p{color:#b1bac4}.final-review{border:0;padding:0;margin:24px 0}.final-review legend{font-size:16px;font-weight:600}.final-review>p{font-size:13px;color:var(--mu);margin:6px 0 14px}.final-review .review{margin-top:0}.final-review button{font-size:13px}.review-prompt{font-size:14px;color:var(--mu);margin-top:0}#pr .frankenstein{font-size:24px;margin:30px 0 8px}.review-outcome{border:1px solid var(--bd);border-radius:6px;padding:20px;margin-top:18px}.review-outcome h3{font-size:16px;margin:0 0 14px}.review-outcome>p{font-size:13px;color:var(--mu)}#outcome-credit{font-size:14px}#pr .verdict{font-size:14px;border-top:1px solid var(--bd);padding-top:22px;margin-top:24px}@media(max-width:600px){.perspective-row{grid-template-columns:1fr;gap:4px}.pr-proposal .boxb,.pr-credit-output .boxb{padding:18px}.proposal-line{font-size:18px}.final-review .review{display:grid;grid-template-columns:1fr}.final-review button{text-align:center}#pr .frankenstein{font-size:21px}}
 
 #title-screen{position:fixed;inset:0;z-index:1000;background:#0b0a0b;opacity:1;transition:opacity .65s ease,filter .65s ease}#title-screen[hidden]{display:none}#title-screen.departing{opacity:0;filter:blur(8px);pointer-events:none}#title-screen-frame{display:block;width:100%;height:100%;border:0;background:#0b0a0b}body.title-active{overflow:hidden}@media(prefers-reduced-motion:reduce){#title-screen{transition:none}}
+/* Who wrote this? — glowing keywords + more readable text */
+#game>p{font-size:17px;line-height:1.7;color:#d0d7de;max-width:760px}
+#game>p strong,#game .boxb p strong,#game .reveal strong,#game .reveal b{color:#fff;text-shadow:0 0 10px rgba(88,166,255,.55),0 0 2px rgba(88,166,255,.35)}
+#game .round-count{color:#9fb3c8;font-size:13px}
+#game pre{font-size:15px;line-height:1.9;padding:20px 22px;color:#e6edf3;background:#0a0d12}
+#game pre .syn-keyword{color:#ff7b72;text-shadow:0 0 8px rgba(255,123,114,.7)}
+#game pre .syn-function{color:#e8e8a8;text-shadow:0 0 8px rgba(220,220,170,.55)}
+#game pre .syn-type{color:#5eead4;text-shadow:0 0 8px rgba(78,201,176,.65)}
+#game pre .syn-string{color:#b9e0ff;text-shadow:0 0 7px rgba(165,214,255,.5)}
+#game pre .syn-number{color:#cfe8b8;text-shadow:0 0 7px rgba(181,206,168,.5)}
+#game pre .syn-comment{color:#a6b3c2}
+#game .reveal{font-size:16px;line-height:1.8;color:#e6edf3;background:#d2992214}
+#game .reveal p{margin:0 0 12px;max-width:760px}
+#game .reveal code,#game .boxb code{color:#79c0ff;background:#2f81f71a;padding:1px 6px;border-radius:4px;text-shadow:0 0 8px rgba(88,166,255,.5)}
+#game .choices button{font-size:15px;font-weight:600;color:#fff}
+#game .choices button:hover:not(:disabled){box-shadow:0 0 14px rgba(47,129,247,.45)}
+#game .boxb h3{font-size:20px;color:#fff}
+#game .boxb p{font-size:16px;line-height:1.75;color:#d0d7de;max-width:780px}
+#game .history-summary{color:#b6c2cf;font-size:14px}
+#game .history-summary b{color:#fff;text-shadow:0 0 12px rgba(88,166,255,.6)}
+#game .boxb li{line-height:1.7;font-size:15px;color:#d0d7de}
+#game .boxb summary{font-size:15px;color:#fff}
+#game .next{box-shadow:0 0 16px rgba(46,160,67,.45)}
 </style>
 <style id="rework-styles">
 .cmb .lead{margin:.5em 0 0;font-size:15px;color:var(--tx)}
